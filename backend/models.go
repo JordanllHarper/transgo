@@ -28,15 +28,13 @@ type Transport struct {
 	id             int
 	name           string
 	travelTimeInMs int
+	Coordinates
 	Status
 	TransportType
 }
 
 // Coordinates for locating on an x and y axis
-type Coordinates struct {
-	x int
-	y int
-}
+type Coordinates struct{ x, y int }
 
 // Singular destination in the transport map
 type Node struct {
