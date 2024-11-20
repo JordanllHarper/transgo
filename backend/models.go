@@ -36,13 +36,19 @@ type Transport struct {
 // Coordinates for locating on an x and y axis
 type Coordinates struct{ x, y int }
 
-// Singular destination in the transport map
-type Node struct {
-	id         int
-	name       string
-	neighbours []Node
+// Information for a particular node
+type NodeInformation struct {
+	id   int
+	name string
 	Coordinates
 	NodeType
+}
+
+// Singular destination in the transport map
+// Stores neighbours as ids
+type Node struct {
+	neighbours []int
+	NodeInformation
 }
 
 type JourneyStatus int
@@ -53,6 +59,7 @@ const (
 	Finished
 )
 
+// Singular instances of a Transport going between a source and destination Node.
 type Journey struct {
 	id                 int
 	Source             Node
