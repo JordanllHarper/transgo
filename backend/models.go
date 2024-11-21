@@ -9,28 +9,14 @@ const (
 	Emergency
 )
 
-type TransportType int
-
-const (
-	Train TransportType = iota
-	Plane
-)
-
 type NodeType int
 
-const (
-	TrainStation = iota
-	Airport
-)
-
-// Singular transport entity that can go from a source to a destination
-type Transport struct {
+type TrainEntity struct {
 	id             int
 	name           string
 	travelTimeInMs int
 	Coordinates
 	Status
-	TransportType
 }
 
 // Coordinates for locating on an x and y axis
@@ -59,12 +45,12 @@ const (
 	Finished
 )
 
-// Singular instances of a Transport going between a source and destination Node.
+// Singular instances of a Train going between a source and destination Node.
 type Journey struct {
 	id                 int
 	Source             Node
 	Destination        Node
 	percentageProgress float32
 	JourneyStatus
-	Transport
+	TrainEntity
 }
