@@ -3,9 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
+
+	"gorm.io/gorm"
 )
 
 // Root requests provide information about the state of the applicationa
@@ -30,7 +31,6 @@ type TrainGetRequest interface{}
 func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
 	id := queries.Get("id")
-	fmt.Println("Id", id)
 	if id == "" {
 		var trainEntities []TrainEntity
 		db.Find(&trainEntities)
@@ -42,9 +42,7 @@ func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	var trainEntity TrainEntity
-	result := db.Where(&TrainEntity{Model: gorm.Model{ID: uint(parsedId)}}).Find(&trainEntity)
-
-	fmt.Println(result.RowsAffected)
+	result := db.Where(&TrainEntity{DbFields: DbFields{ID: uint(parsedId)}}).Find(&trainEntity)
 
 	if result.RowsAffected == 0 {
 		return TrainGetRequestEmpty{}, nil
@@ -73,11 +71,11 @@ func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		return nil, customClientError(malformedBody)
 	}
 
-	tEntity := TrainEntity{Train: train}
+	tEntity := TrainEntity{DbFields: DbFields{}, Train: train}
 	db.Create(&tEntity)
 	fmt.Printf("[INFO]: Inserted train entity: %v\n", tEntity)
 
-	return TrainGetRequestSingular{}, nil
+	return TrainGetRequestSingular{tEntity}, nil
 }
 
 const provideId string = "No ID provided"
@@ -96,7 +94,7 @@ func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	trainEntity := &TrainEntity{
-		Model: gorm.Model{ID: uint(parsedId)},
+		DbFields: DbFields{ID: uint(parsedId)},
 	}
 	result := db.Delete(&trainEntity)
 	if result.RowsAffected != 0 {

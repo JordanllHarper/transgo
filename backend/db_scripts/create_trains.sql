@@ -6,7 +6,7 @@ CREATE TABLE train_entities(
     updated_at DATETIME,
     deleted_at DATETIME,
     name VARCHAR(255) NOT NULL,
-    travel_time_in_ms int NOT NULL,
+    top_speed int NOT NULL,
     x int NOT NULL,
     y int NOT NULL,
     status ENUM(

@@ -31,6 +31,8 @@ func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 		if err := encoder.Encode(response); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return err
+		} else {
+			fmt.Println("Responded to GET request with", response)
 		}
 
 	case "POST":
@@ -44,6 +46,8 @@ func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 		if err := encoder.Encode(response); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return err
+		} else {
+			fmt.Println("Responded to POST request with", response)
 		}
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)

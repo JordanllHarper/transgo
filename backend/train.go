@@ -1,7 +1,5 @@
 package main
 
-import "gorm.io/gorm"
-
 type Status string
 
 const (
@@ -12,12 +10,13 @@ const (
 )
 
 type TrainEntity struct {
-	gorm.Model
+	DbFields
 	Train
 }
 type Train struct {
-	Name           string
-	TravelTimeInMs int
+	Name     string `json:"name"`
+	// meters / second
+	TopSpeed int    `json:"top_speed"`
 	Coordinates
-	Status
+	Status `json:"status"`
 }
