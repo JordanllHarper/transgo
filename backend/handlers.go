@@ -2,73 +2,49 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
-
-	"gorm.io/gorm"
 )
 
 // Root requests provide information about the state of the applicationa
 // Used in the train dashboard.
 func handleRoot(w http.ResponseWriter, r *http.Request) {}
 
-type TrainGetResponse interface {
-	GetJson() ([]byte, error)
-}
-
 type TrainGetRequestEmpty struct{}
-
-func (req TrainGetRequestEmpty) GetJson() ([]byte, error) {
-	return []byte{}, nil
-}
 
 type TrainGetRequestSingular struct {
 	TrainEntity
-}
-
-func (trainDto TrainGetRequestSingular) GetJson() ([]byte, error) {
-	var data []byte
-	err := json.Unmarshal(data, &trainDto)
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
 }
 
 type TrainGetRequestMultiple struct {
 	Trains []TrainEntity
 }
 
-func (trainDto TrainGetRequestMultiple) GetJson() ([]byte, error) {
-	var data []byte
-	err := json.Unmarshal(data, &trainDto)
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
-}
+type TrainGetRequest interface{}
 
-type GetTrainRequest struct {
-	Id *uint
-}
-
-func onTrainGet(db *gorm.DB, req *http.Request) (TrainGetResponse, error) {
+// Gets a train.
+//
+// Accepts an "id" in a request for a specified train, or leave blank for all the trains available.
+func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
 	id := queries.Get("id")
+	fmt.Println("Id", id)
 	if id == "" {
 		var trainEntities []TrainEntity
-		db.Find((&trainEntities))
+		db.Find(&trainEntities)
 		return TrainGetRequestMultiple{trainEntities}, nil
 	}
 	parsedId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, customClientError("Invalid Id")
 	}
 
 	var trainEntity TrainEntity
-	result := db.Where("id = ?", parsedId).Find(&trainEntity)
+	result := db.Where(&TrainEntity{Model: gorm.Model{ID: uint(parsedId)}}).Find(&trainEntity)
+
+	fmt.Println(result.RowsAffected)
 
 	if result.RowsAffected == 0 {
 		return TrainGetRequestEmpty{}, nil
@@ -77,12 +53,15 @@ func onTrainGet(db *gorm.DB, req *http.Request) (TrainGetResponse, error) {
 	return TrainGetRequestSingular{trainEntity}, nil
 }
 
-// / Creates a new train and inserts into the database. Returns the train in the body of the response.
-func onTrainPost(db *gorm.DB, req *http.Request) (TrainEntity, error) {
+const needBody string = "Need body"
+const malformedBody string = "Malformed body"
+
+// Creates a new train and inserts into the database. Returns the train in the body of the response.
+func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	body := req.Body
 
 	if body == nil {
-		return TrainEntity{}, errors.New("Invalid post request, need body")
+		return nil, customClientError(needBody)
 	}
 
 	decoder := json.NewDecoder(body)
@@ -91,12 +70,40 @@ func onTrainPost(db *gorm.DB, req *http.Request) (TrainEntity, error) {
 	err := decoder.Decode(&train)
 
 	if err != nil {
-		return TrainEntity{}, err
+		return nil, customClientError(malformedBody)
 	}
 
 	tEntity := TrainEntity{Train: train}
 	db.Create(&tEntity)
 	fmt.Printf("[INFO]: Inserted train entity: %v\n", tEntity)
 
-	return tEntity, nil
+	return TrainGetRequestSingular{}, nil
+}
+
+const provideId string = "No ID provided"
+
+func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+	queries := req.URL.Query()
+	id := queries.Get("id")
+
+	if id == "" {
+		return nil, customClientError(provideId)
+	}
+
+	parsedId, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, customClientError("Invalid Id")
+	}
+
+	trainEntity := &TrainEntity{
+		Model: gorm.Model{ID: uint(parsedId)},
+	}
+	result := db.Delete(&trainEntity)
+	if result.RowsAffected != 0 {
+		fmt.Printf("[INFO]: Deleted train entity id: %v\n", parsedId)
+	} else {
+		fmt.Printf("[INFO]: Attempted deletion with no result: %v\n", parsedId)
+	}
+
+	return nil, nil
 }

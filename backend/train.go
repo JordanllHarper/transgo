@@ -11,7 +11,6 @@ const (
 	Emergency           = "Emergency"
 )
 
-
 type TrainEntity struct {
 	gorm.Model
 	Train

@@ -3,57 +3,53 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"net/http"
 )
 
-func checkError(err error) {
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-	}
-}
-
-type ErrorResponse struct {
-	code    uint
-	message string
+func handleHttpError(w http.ResponseWriter, err HttpError) {
+	code, msg := err.Status()
+	http.Error(w, msg, code)
 }
 
 // Crud operations on trains
 func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	method := r.Method
 	encoder := json.NewEncoder(w)
-	var response any
-	response = struct {
-		code    uint
-		message string
-	}{
-		code:    500,
-		message: "Internal Server Error ",
-	}
-
-	var err error
 
 	switch method {
 	case "GET":
-		response, err = onTrainGet(db, r)
+		response, httpError := onTrainGet(db, r)
+		if httpError != nil {
+			handleHttpError(w, httpError)
+			return nil
+		}
+		if err := encoder.Encode(response); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
 
 	case "POST":
-		response, err = onTrainPost(db, r)
-
-	default:
-		response = struct {
-			code    uint
-			message string
-		}{
-			code:    405,
-			message: "Method Not Allowed",
+		response, err := onTrainPost(db, r)
+		if err != nil {
+			code, msg := err.Status()
+			http.Error(w, msg, code)
+			return nil
 		}
+
+		if err := encoder.Encode(response); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 
-	encoder.Encode(response)
-
-	return err
+	return nil
 }
 
 func main() {
@@ -64,7 +60,11 @@ func main() {
 		&gorm.Config{},
 	)
 
-	checkError(err)
+	if err != nil {
+		log.Fatalf("Database error %s", err)
+		os.Exit(1)
+		return // for explicitness
+	}
 
 	{
 		http.HandleFunc("/", handleRoot)
@@ -92,5 +92,3 @@ func main() {
 	fmt.Printf("%v\n", err)
 
 }
-
-// e = ln
